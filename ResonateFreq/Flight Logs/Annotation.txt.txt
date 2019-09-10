@@ -1,0 +1,37 @@
+2019-09-09-15-15-03.log
+	Mode 31 Switch confirmed
+	ATT data looks good (timing matches up well)
+	
+2019-09-09 14-37-32.log
+	Mode 32 Switch
+	By,Bx data is clear but bad response data
+	Maybe because the flight mode was not switched properly?
+
+2019-09-09 14-21-28.log
+	Mode 32 Switch
+	Bx, By looks good. Again the ATT response looks delayed
+
+2019-09-05 16-04-06.log
+	Not too much spacing between By data frequency changes but looks clear
+	Mode 31 switched
+	Time sync between ATT and By not defined as clearly
+	
+2019-09-05 15-51-25.log
+	Mode 31 switch
+	By is clear
+	ATT data may not be as clear
+
+2019-09-05 14-14-16.log
+	Loiter Mode
+	ATT data is clear
+	By data is clear
+	
+2019-09-05 11-40-45.log
+	Loiter Switch
+	By Clear
+	ATT is clear
+	
+Conclusion:
+	Mode 31 Logs:
+		Line 1
+		Line 19
