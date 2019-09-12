@@ -25,13 +25,28 @@
 	Loiter Mode
 	ATT data is clear
 	By data is clear
+	Note that PSC data is available and clear
+	Probably best data set for Loiter
 	
 2019-09-05 11-40-45.log
 	Loiter Switch
 	By Clear
 	ATT is clear
 	
-Conclusion:
-	Mode 31 Logs:
-		Line 1
-		Line 19
+SimLogs:
+
+00000112.log
+	Loiter Switch
+	1Hz
+	Out of phase
+
+00000113.log
+	Loiter Switch
+	0.25Hz
+	In phase
+
+00000114.log
+	Loiter Switch
+	4Hz
+	No movement
+	
