@@ -28,3 +28,21 @@ slprj/sim/varcache/att_sim/checksumOfCache\.mat
 slprj/sim/varcache/att_sim/tmwinternal/simulink_cache\.xml
 
 slprj/sim/varcache/att_sim/varInfo\.mat
+
+slprj/sim/varcache/att2pos_controller/checksumOfCache.mat
+
+slprj/sim/varcache/att2pos_controller/tmwinternal/simulink_cache.xml
+
+slprj/sim/varcache/att2pos_controller/varInfo.mat
+
+slprj/sim/varcache/pos_controller/checksumOfCache.mat
+
+slprj/sim/varcache/pos_controller/tmwinternal/simulink_cache.xml
+
+slprj/sim/varcache/pos_controller/varInfo.mat
+
+slprj/sim/varcache/pos_full_controller/checksumOfCache.mat
+
+slprj/sim/varcache/pos_full_controller/tmwinternal/simulink_cache.xml
+
+slprj/sim/varcache/pos_full_controller/varInfo.mat

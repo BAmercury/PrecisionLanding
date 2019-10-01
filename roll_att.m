@@ -4,14 +4,13 @@
 
 s = tf('s');
 Ixx = 0.008;
-l = 0.275; % In meters, length from CG to motor
-bt = 1; % Motor torque coefficient
 
+%%
 % Linearized about the hover state
 % States: [Roll, Roll Rate]
 % Generate SISO Transfer function for output Roll Velocity
 A = [0 1; 0 0];
-B = [0; l/Ixx];
+B = [0; 1/Ixx];
 C = [0 1];
 D = 0;
 sys = ss(A, B, C, D);
@@ -55,13 +54,6 @@ I_Vel = 1;
 D_Vel = 0.5;
 IMAX_Vel = 100;
 
-% PID Accel to motors
-P_Accel = 0.5;
-I_Accel = 1
-D_Accel = 0
-IMAX_Accel = 80
-
-
 %% Getting transfer functions from Simulink
 
 [A_RollV, B_RollV, C_RollV, D_RollV] = linmod('att_rate_controller');
@@ -72,7 +64,7 @@ figure(5);
 margin(att_rate_tf);
 figure(6);
 step(att_rate_tf);
-
+bandwidth_roll_rate = bandwidth(att_rate_tf)
 
 %% Now we should add in outer loop 
 
@@ -84,8 +76,31 @@ figure(8);
 margin(att_angle_tf);
 figure(9);
 step(att_angle_tf);
-
+bandwidth_angle = bandwidth(att_angle_tf)
 %% Now we should add in the translational dynamics and generate new models
 
 % States will now be: [Roll RollV Pos Vel Accel]
+A_full = [0 1 0 0; 0 0 0 0; 0 0 0 1; -9.81 0 0 0];
+B_full = [0; 1/Ixx; 0; 0];
+C_full = [0 1 0 0 ];
+D_full = 0;
+
+sys_full = ss(A_full, B_full, C_full, D_full);
+
+%% Get transfer functions from Simulink Model
+
+% Get Position Transfer function
+[Af_full, Bf_full, Cf_full, Df_full] = linmod('pos_full_controller');
+pos_cntrl_tf = tf(ss(Af_full, Bf_full, Cf_full, Df_full));
+
+% Force some pole zero or near zero cancellations
+pos_cntrl_tf_sys = minreal(pos_cntrl_tf, 0.03);
+
+num_poles = length(pole(pos_cntrl_tf_sys))
+
+num_zero = length(zero(pos_cntrl_tf_sys))
+
+% Number of Poles: 6, Number of Zeros: 2
+margin(pos_cntrl_tf_sys)
+full_system_bandwidth = bandwidth(pos_cntrl_tf_sys)
 
