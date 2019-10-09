@@ -1,0 +1,115 @@
+2019-09-09-15-15-03.log
+	Mode 31 Switch confirmed
+	ATT data looks good (timing matches up well)
+	
+2019-09-09 14-37-32.log
+	Mode 32 Switch
+	By,Bx data is clear but bad response data
+	Maybe because the flight mode was not switched properly?
+
+2019-09-09 14-21-28.log
+	Mode 32 Switch
+	Bx, By looks good. Again the ATT response looks delayed
+
+2019-09-05 16-04-06.log
+	Not too much spacing between By data frequency changes but looks clear
+	Mode 31 switched
+	Time sync between ATT and By not defined as clearly
+	
+2019-09-05 15-51-25.log
+	Mode 31 switch
+	By is clear
+	ATT data may not be as clear
+
+2019-09-05 14-14-16.log
+	Loiter Mode
+	ATT data is clear
+	By data is clear
+	Note that PSC data is available and clear
+	Probably best data set for Loiter
+	
+2019-09-05 11-40-45.log
+	Loiter Switch
+	By Clear
+	ATT is clear
+	
+2019-09-30 13-26-28.log
+	Mode 31, no GPS. No PrecLand EKF
+	Hover, 4m, 2m, 3m, 1m
+SimLogs:
+Note that frequencies listed are for the input data (PL Y)
+
+Validation data:
+00000112.log
+	Loiter Switch
+	1 rad/s (FFT shows ~0.15 Hz)
+	Out of phase
+	Att is jittery
+
+00000113.log
+	Loiter Switch
+	0.25 rad/s (FFT shows ~0.0406 Hz)
+	In phase
+
+00000114.log
+	Loiter Switch
+	4 rad/s (0.6337 Hz on fft)
+	No movement
+	
+
+
+00000019.log
+	Step input pingpong
+	0m to 3m
+	Hold for 10s
+
+	
+Estimation data:
+
+00000010.log
+	0.1 rad/s
+	FFT shows ~0.02 Hz
+	In phase, keeps up well
+	1 m/s and 9 m
+
+00000011.log
+	0.25 rad/s
+	(~0.043 Hz on fft)
+	In phase
+	0.5 m/s, 2 m
+
+00000012.log
+	1 rad/s
+	0.16 hz in the fft
+	1 m/s, 1 m
+	Not in phase
+	jitters at direction changes
+
+00000013.log
+	2 rad/s
+	in phase
+	0.3207 Hz on fft
+	4 m/s, 2 m
+	Roll is out of phase, does small translation
+	not in phase
+	
+00000015.log
+	5 rad/s
+	FFT shows 0.79 Hz
+	no translation, just rolling side to side
+	roll is laggy
+	5 m/s, 1 m
+
+00000016.log
+	Hover 2
+	Serves as a control for both validation and estimation
+
+00000018.log
+	Step input training log
+	5 meters, 10 second hold
+
+00000066.log
+	Hover 1
+	Loiter Switch
+	Static Target
+	Looks like a step
