@@ -27,6 +27,7 @@ lat_time_delay = 0.156; % (in seconds)
 % U(s) = desired roll (pwm), Y(s) = Vehicle Velocity
 [NUM, DEN] = ss2tf(Alat, Blat, Clat, Dlat);
 sys_lat_tf_vel = tf(NUM, DEN, 'InputDelay', lat_time_delay);
+g = tf(NUM, DEN);
 
 %%
 % U(s) = desired roll (pwm), Y(s) = Vehicle Attitude
@@ -53,7 +54,25 @@ title("roll angle response")
 %% Model verification using flight log data
 
 % Load a log and get input and output data
+% Will need RCIN Channel 1 and NKF1 VE (Lateral Velocity) data
+[file, path] = uigetfile
+load(strcat(path, file));
+
+RCIN_TIME = RCIN(:,2);
+RCIN_DATA = RCIN(:,4);
+
+VE_TIME = NKF1(:,2);
+VE_DATA = NKF1(:,7);
+% From ID data object and then we can compare
+% Sampling rate is 10 Hz for both systems
+measured_data = iddata(VE_DATA, RCIN_DATA, 0.1)
+figure(5)
+plot(measured_data)
 
 
+%%
+systemIdentification
 
-
+%%
+%
+P_Gain = 35.524;
