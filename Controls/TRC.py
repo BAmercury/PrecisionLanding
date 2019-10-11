@@ -89,17 +89,21 @@ def run_trc(vehicle, joystick_inputs):
     dt = current_time - start_time
     start_time = current_time
     a = dt / (RC + dt)
-    pilot_input_forward_f = a * pilot_input_forward + (1-a) * pilot_input_forward
-    pilot_input_lateral_f = a * pilot_input_lateral + (1-a) * pilot_input_lateral
+    pilot_input_forward_f = (a * forward_f) + ((1-a) * float(pilot_input_forward))
+    pilot_input_lateral_f = (a * lateral_f) + ((1-a) * float(pilot_input_lateral))
     # differentiate
     fwd_accel = (pilot_input_forward_f - forward_f)/dt
     forward_f = pilot_input_forward_f
     lat_accel = (pilot_input_lateral_f - lateral_f)/dt
     lateral_f = pilot_input_lateral_f    
 
-    # 
+    # Save output
+    output.append(forward_f) # Forward Velocity Setpoint
+    output.append(fwd_accel) # Pilot Forward Acceleration Feedforward
+    output.append(lateral_f) # Lateral Velocity Setpoint
+    output.append(lat_accel) # Pilot Lateral Acceleration Feedforward
 
-    # Return Acceleration Feedforward and Desired Setpoint as a list
+    # Now apply PI controller
 
 
 

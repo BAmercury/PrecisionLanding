@@ -1,4 +1,4 @@
-# Testing command filter out to see if it works as expected
+# Script to test command filter + a PI controller
 import time
 import numpy as np
 from matplotlib import pyplot as plt
@@ -6,6 +6,7 @@ from matplotlib import pyplot as plt
 update_rate = 0.2
 start_time = 0
 forward_f = 0.0
+
 RC = 0.7
 
 
@@ -30,6 +31,9 @@ for time_step in time_vec:
     # Differentiate
     fwd_accel = (pilot_input_forward_f - forward_f) / dt
     forward_f = pilot_input_forward_f
+
+
+    # Now we apply the control
 
     # Save output
     filt_command[i] = pilot_input_forward_f
