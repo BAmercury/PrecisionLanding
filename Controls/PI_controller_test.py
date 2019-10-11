@@ -1,4 +1,5 @@
 # Script to test command filter + a PI controller
+# Will plot final RC override output, looking to see if it mactches the constructed simulink model
 import time
 import numpy as np
 from matplotlib import pyplot as plt
@@ -34,6 +35,8 @@ for time_step in time_vec:
 
 
     # Now we apply the control
+
+    # Then do conversions before final output
 
     # Save output
     filt_command[i] = pilot_input_forward_f
