@@ -95,8 +95,8 @@ def run_trc(vehicle, joystick_inputs):
     # Translational Rate Control
     output = []
     # First step is to get user input and run through a command filter
-    pilot_input_forward = joystick_inputs[1]
-    pilot_input_lateral = joystick_inputs[0]
+    pilot_input_forward = -joystick_inputs[1]
+    pilot_input_lateral = -joystick_inputs[0]
     #print("Desired Forward (m/s): %s" % pilot_input_forward)
     #print("Desired Lateral (m/s): %s" % pilot_input_lateral)
 
