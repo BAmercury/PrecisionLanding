@@ -12,6 +12,6 @@
     "UDP" : "127.0.0.1:14550",
     "UpdateRate" : "0.005",
     "MaxSpeed" : "5",
-    "MinSpeed" : "-5"
+    "MinSpeed" : "-10"
 }
 
