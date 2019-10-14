@@ -43,10 +43,10 @@ sys_lat_tf_roll = tf(NUMr, DENr, 'InputDelay', lat_time_delay);
 % Model is detrended so 1500 is max and 0 is trim
 [u,t] = gensig('square',5,10,0.1);
 figure(1);
-lsim(sys_lat_tf_vel, u*1500, t,0)
+lsim(sys_lat_tf_vel, u*100, t,0)
 title("lateral velocity response")
 figure(2);
-lsim(sys_lat_tf_roll, u*1500, t,0)
+lsim(sys_lat_tf_roll, u*100, t,0)
 title("roll angle response")
 
 
@@ -73,6 +73,21 @@ plot(measured_data)
 %%
 systemIdentification
 
-%%
-%
-P_Gain = 35.524;
+%% TRC Simulation (Pitch)
+Kp = 1.351;
+Ki = 0.0095;
+g = 32.033;
+fl = 1/g;
+PWM_deadband = 30;
+PWM_max_pitch = 2015;
+PWM_min_pitch = 999;
+PWM_bias_pitch = 1503;
+pitch_max = 30; % degrees
+gain_pitch_max = 1/pitch_max;
+deg2rad = 57.2958;
+Kpwm = 16;
+% Command Filter
+s = tf('s');
+RC = 0.7;
+cf_sys = s/(RC*s + 1);
+[cf_num, cf_den] = tfdata(cf_sys);
