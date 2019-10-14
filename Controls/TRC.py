@@ -150,8 +150,8 @@ def run_trc(vehicle, joystick_inputs):
     final_output_roll = constrain(final_output_roll, 0, 2000)
     final_output_pitch = abs(int(pwm_output_f + 1500))
     final_output_pitch = constrain(final_output_pitch, 0, 2000)
-    print("Forward Deg: %s" % final_output_pitch)
-    print("Lateral Deg: %s" % final_output_roll)
+    print("Forward Error: %s" % forward_error)
+    print("Lateral Error: %s" % lateral_error)
     vehicle.channels.overrides[1] = final_output_roll
     vehicle.channels.overrides[2] = final_output_pitch
     #vehicle.channels.overrides = {'1': abs(int(pwm_output_f + 1500)), '2': abs(int(pwm_output_lat + 1500))}
