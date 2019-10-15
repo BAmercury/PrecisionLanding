@@ -94,7 +94,7 @@ def run_trc(vehicle, joystick_inputs):
     output = []
     # First step is to get user input and run through a command filter
     #pilot_input_forward = -joystick_inputs[1]
-    pilot_input_lateral = 1.64042 # ft/s
+    pilot_input_lateral = joystick_inputs[0] # m/s
     #print("Desired Forward (m/s): %s" % pilot_input_forward)
     #print("Desired Lateral (m/s): %s" % pilot_input_lateral)
 
@@ -120,7 +120,7 @@ def run_trc(vehicle, joystick_inputs):
 
     # Now apply PI controller
     #pi_controller_f.setpoint = 0.5
-    pi_controller_lat.setpoint = lateral_f
+    pi_controller_lat.setpoint = lateral_f * 3.28084 #ft/s
     vel_meas = vehicle.velocity # [Vx, Vy, Vz] in m/s
     #control_f = pi_controller_f(vel_meas[0])
     control_lat = pi_controller_lat(vel_meas[1] * 3.28084)
@@ -137,7 +137,7 @@ def run_trc(vehicle, joystick_inputs):
     pi_output_lat_deg = (180/math.pi) * pi_output_lat
     # Convert to PWM with 1500 Trim
     #pwm_output_f = (pi_output_f_deg * -16) 
-    pwm_output_lat = (pi_output_lat_deg * 16)
+    pwm_output_lat = (pi_output_lat_deg * 17.333)
     #print(pi_controller_f.setpoint - int(vel_meas[0]))
     # Output RC override (Pitch and Roll)
     #final_output_roll = abs(int(pwm_output_lat))
@@ -146,11 +146,13 @@ def run_trc(vehicle, joystick_inputs):
     #print(pi_controller_lat.setpoint)
     #vehicle.channels.overrides[1] = final_output_roll
     print("PI Output: %s" % control_lat)
-    print("PI Command (Radians): %s" % pi_output_lat)
-    print("PI Command (Degrees): %s" % pi_output_lat_deg)
-    print("PWM Command: %s" % pwm_output_lat)
+    print("PI Setpoint: %s" % pi_controller_lat.setpoint)
     print("Vehicle Velocity: %s" % (vel_meas[1] * 3.28084))
-    vehicle.channels.overrides[1] = pwm_output_lat + 1500
+    print("Error: %s" % (pi_controller_lat.setpoint - (vel_meas[1]*3.28084)))
+    #print("PI Command (Radians): %s" % pi_output_lat)
+    #print("PI Command (Degrees): %s" % pi_output_lat_deg)
+    print("PWM Command: %s" % (int(pwm_output_lat + 1500)))
+    vehicle.channels.overrides[1] = int(pwm_output_lat + 1500)
     #vehicle.channels.overrides = {'1': abs(int(pwm_output_f + 1500)), '2': abs(int(pwm_output_lat + 1500))}
 
 
