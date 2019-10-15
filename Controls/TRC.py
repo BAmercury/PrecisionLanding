@@ -3,12 +3,10 @@
 # Using Dronekit to send commands to drone
 from dronekit import connect, VehicleMode
 import pygame
-import pygame
 import time
-import json
 import sys
 import math
-
+from simple_pid import PID
 # Declare Variables
 pilot_joy_enable = False
 joystick_inputs = [0, 0, 1500, 1500]
@@ -30,7 +28,9 @@ lateral_integral = 0
 g = 32.033
 Kpwm = 16
 
-
+# PID object
+pi_controller_f = PID(Kp_long, Ki_long, 0, sample_time=0.05, output_limits=(1000, 2000))
+pi_controller_lat = PID(Kp_lat, Ki_lat, sample_time=0.05, output_limits=(1000, 2000))
 # Function takes in joystick value and maps it to a desired speed command in m/s
 def map2speed(JoystickVal, mapping):
     return float( (JoystickVal - -1 * (float(mapping['MaxSpeed']) - float(mapping['MinSpeed']) / (1 - -1) + float(mapping['MinSpeed']))))
@@ -50,7 +50,7 @@ def getJoystickUpdates(mapping):
 
 # Evaluates states of buttons on controller and outputs corresponding commands
 def ButtonUpdates(mapping):
-    global pilot_joy_enable, toggle_custom_mode, toggle_arm, toggle_trc
+    global pilot_joy_enable, toggle_arm, toggle_trc
     # Arm On/off
     if (j_interface.get_button(int(mapping['Arm'])) == 1):
         toggle_arm ^= 1
@@ -86,9 +86,6 @@ def ButtonUpdates(mapping):
         else:
             print("TRC OFF")
 
-def constrain(val, min_val, max_val):
-    return min(max_val, max(min_val, val))
-
 def run_trc(vehicle, joystick_inputs):
     global start_time, forward_f, lateral_f, forward_integral, lateral_integral
 
@@ -121,23 +118,16 @@ def run_trc(vehicle, joystick_inputs):
     output.append(lat_accel) # Pilot Lateral Acceleration Feedforward
 
     # Now apply PI controller
-
-    # Get the error between pilot and aircraft
     vel_meas = vehicle.velocity # [Vx, Vy, Vz] in m/s
-    forward_error = forward_f - vel_meas[0]
-    lateral_error = lateral_f - vel_meas[1]
-    # Apply P
-    forward_p = Kp_long * forward_error
-    lat_p = Kp_lat * lateral_error
-    # Apply I
-    forward_integral = forward_integral + forward_error * dt
-    lateral_integral = lateral_integral + lateral_error * dt
-    #forward_integral = constrain(forward_integral, 0, 30)
-    #lateral_integral = constrain(lateral_integral, 0, 30)
+    control_f = pi_controller_f(vel_meas[0])
+    control_lat = pi_controller_lat(vel_meas[1])
+
+
+
     #print(forward_integral)
     # Output is in Radians
-    pi_output_f = (-1/g) * (forward_p + (Ki_long * forward_integral) + output[1])
-    pi_output_lat = (1/g) * (lat_p + (Ki_lat * lateral_integral) + output[3])
+    pi_output_f = (-1/g) * (control_f + output[1])
+    pi_output_lat = (1/g) * (control_lat + output[3])
     # Convert Radians to Degrees
     pi_output_f_deg = (180/math.pi) * pi_output_f
     pi_output_lat_deg = (180/math.pi) * pi_output_lat
@@ -147,11 +137,7 @@ def run_trc(vehicle, joystick_inputs):
 
     # Output RC override (Pitch and Roll)
     final_output_roll = abs(int(pwm_output_lat + 1500))
-    final_output_roll = constrain(final_output_roll, 0, 2000)
     final_output_pitch = abs(int(pwm_output_f + 1500))
-    final_output_pitch = constrain(final_output_pitch, 0, 2000)
-    print("Forward Error: %s" % forward_error)
-    print("Lateral Error: %s" % lateral_error)
     vehicle.channels.overrides[1] = final_output_roll
     vehicle.channels.overrides[2] = final_output_pitch
     #vehicle.channels.overrides = {'1': abs(int(pwm_output_f + 1500)), '2': abs(int(pwm_output_lat + 1500))}
