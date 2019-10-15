@@ -34,7 +34,12 @@ pi_controller_f = PID(Kp_long, Ki_long, 0, sample_time=0.05)
 pi_controller_lat = PID(Kp_lat, Ki_lat, 0, sample_time=0.05)
 # Function takes in joystick value and maps it to a desired speed command in m/s
 def map2speed(JoystickVal, mapping):
-    return float( (JoystickVal - -1 * (float(mapping['MaxSpeed']) - float(mapping['MinSpeed']) / (1 - -1) + float(mapping['MinSpeed']))))
+    InMin = float(mapping['JoystickMin'])
+    InMax = float(mapping['JoystickMax'])
+    OutMax = float(mapping['MaxSpeed'])
+    OutMin = float(mapping['MinSpeed'])
+    val = (JoystickVal - InMin) * (OutMax - OutMin) / (InMax - InMin) + OutMin
+    return float(val)
 # Function to map joystick input to PWM
 # PWM range is 1900 to 1100 and joystick range is 1 to -1
 def map2pwm(x):
@@ -94,7 +99,8 @@ def run_trc(vehicle, joystick_inputs):
     # First step is to get user input and run through a command filter
     pilot_input_forward = -joystick_inputs[1] # m/s, joystick need flipped
     pilot_input_lateral = joystick_inputs[0] # m/s
-
+    print(pilot_input_forward)
+    print(pilot_input_lateral)
     # Get time interval
     current_time = time.time()
     dt = current_time - start_time
@@ -112,6 +118,7 @@ def run_trc(vehicle, joystick_inputs):
     # Now apply PI controller
     pi_controller_f.setpoint = forward_f * 3.28084 # ft/s
     pi_controller_lat.setpoint = lateral_f * 3.28084 # ft/s
+    # GPS Velocity
     vel_meas = vehicle.velocity # [Vx, Vy, Vz] in m/s
     control_f = pi_controller_f(vel_meas[0] * 3.28084) # Feedback in ft/s
     control_lat = pi_controller_lat(vel_meas[1] * 3.28084) # Feedback in ft/s
@@ -124,15 +131,10 @@ def run_trc(vehicle, joystick_inputs):
     # Convert to PWM with 1500 Trim
     pwm_output_f = (pi_output_f_deg * -17.333) 
     pwm_output_lat = (pi_output_lat_deg * 17.333)
-    # print("PI Output: %s" % control_lat)
-    # print("PI Setpoint: %s" % pi_controller_lat.setpoint)
-    # print("Vehicle Velocity: %s" % (vel_meas[1] * 3.28084))
-    # print("Error: %s" % (pi_controller_lat.setpoint - (vel_meas[1]*3.28084)))
-    # print("PI Command (Radians): %s" % pi_output_lat)
-    # print("PI Command (Degrees): %s" % pi_output_lat_deg)
-    # print("PWM Command: %s" % (int(pwm_output_lat + 1500)))
+
     pwm_f = abs(int(pwm_output_f + 1500))
     pwm_l = abs(int(pwm_output_lat + 1500))
+    
     # Enforce Saturation Limits
     if (pwm_f > 2000):
         pwm_f = 2000
@@ -213,8 +215,7 @@ try:
 
             if event.type == pygame.JOYBUTTONDOWN:
                 ButtonUpdates(config_map)
-                #print "Attitude: %s" % vehicle.attitude
-                #print "Global Location (relative altitude): %s" % vehicle.location.global_relative_frame.alt
+            
 
         # Send Joystick Inputs if enabled
         if pilot_joy_enable:
@@ -222,7 +223,7 @@ try:
         
         if (toggle_trc):
             run_trc(vehicle, joystick_inputs)
-            print("Velocity (m/s): %s" % vehicle.velocity)
+            #print("Velocity (m/s): %s" % vehicle.velocity)
         
         time.sleep(float(config_map['UpdateRate'])) # Radio Update Rate
 

@@ -68,3 +68,5 @@ slprj/sim/varcache/id_model/
 slprj/sim/varcache/trc_controller/
 
 Study/slprj/sim/varcache/trc_controller/
+
+Controls/TRC.pyc
