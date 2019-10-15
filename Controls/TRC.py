@@ -6,6 +6,7 @@ import pygame
 import time
 import sys
 import math
+import json
 from simple_pid import PID
 # Declare Variables
 pilot_joy_enable = False
@@ -29,8 +30,8 @@ g = 32.033
 Kpwm = 16
 
 # PID object
-pi_controller_f = PID(Kp_long, Ki_long, 0, sample_time=0.05, output_limits=(1000, 2000))
-pi_controller_lat = PID(Kp_lat, Ki_lat, sample_time=0.05, output_limits=(1000, 2000))
+pi_controller_f = PID(Kp_long, Ki_long, 0, sample_time=0.05, output_limits=(-0.523599, 0.523599))
+pi_controller_lat = PID(Kp_lat, Ki_lat, 0, sample_time=0.05)
 # Function takes in joystick value and maps it to a desired speed command in m/s
 def map2speed(JoystickVal, mapping):
     return float( (JoystickVal - -1 * (float(mapping['MaxSpeed']) - float(mapping['MinSpeed']) / (1 - -1) + float(mapping['MinSpeed']))))
@@ -92,8 +93,8 @@ def run_trc(vehicle, joystick_inputs):
     # Translational Rate Control
     output = []
     # First step is to get user input and run through a command filter
-    pilot_input_forward = -joystick_inputs[1]
-    pilot_input_lateral = -joystick_inputs[0]
+    #pilot_input_forward = -joystick_inputs[1]
+    pilot_input_lateral = 1.64042 # ft/s
     #print("Desired Forward (m/s): %s" % pilot_input_forward)
     #print("Desired Lateral (m/s): %s" % pilot_input_lateral)
 
@@ -103,43 +104,53 @@ def run_trc(vehicle, joystick_inputs):
     start_time = current_time
     # Command Filter: 
     a = dt / (RC + dt)
-    pilot_input_forward_f = (a * forward_f) + ((1-a) * float(pilot_input_forward))
+    #pilot_input_forward_f = (a * forward_f) + ((1-a) * float(pilot_input_forward))
     pilot_input_lateral_f = (a * lateral_f) + ((1-a) * float(pilot_input_lateral))
     # differentiate
-    fwd_accel = (pilot_input_forward_f - forward_f)/dt
-    forward_f = pilot_input_forward_f
+    #fwd_accel = (pilot_input_forward_f - forward_f)/dt
+    #forward_f = pilot_input_forward_f
     lat_accel = (pilot_input_lateral_f - lateral_f)/dt
     lateral_f = pilot_input_lateral_f    
 
     # Save output
-    output.append(forward_f) # Forward Velocity Setpoint
-    output.append(fwd_accel) # Pilot Forward Acceleration Feedforward
-    output.append(lateral_f) # Lateral Velocity Setpoint
-    output.append(lat_accel) # Pilot Lateral Acceleration Feedforward
+    #output.append(forward_f) # Forward Velocity Setpoint
+    #output.append(fwd_accel) # Pilot Forward Acceleration Feedforward
+    #output.append(lateral_f) # Lateral Velocity Setpoint
+    #output.append(lat_accel) # Pilot Lateral Acceleration Feedforward
 
     # Now apply PI controller
+    #pi_controller_f.setpoint = 0.5
+    pi_controller_lat.setpoint = lateral_f
     vel_meas = vehicle.velocity # [Vx, Vy, Vz] in m/s
-    control_f = pi_controller_f(vel_meas[0])
-    control_lat = pi_controller_lat(vel_meas[1])
+    #control_f = pi_controller_f(vel_meas[0])
+    control_lat = pi_controller_lat(vel_meas[1] * 3.28084)
 
 
 
     #print(forward_integral)
     # Output is in Radians
-    pi_output_f = (-1/g) * (control_f + output[1])
-    pi_output_lat = (1/g) * (control_lat + output[3])
+    #pi_output_f = (-1/g) * (control_f)
+    pi_output_lat = (1/g) * (control_lat + lat_accel)
+    #print(pi_output_f)
     # Convert Radians to Degrees
-    pi_output_f_deg = (180/math.pi) * pi_output_f
+    #pi_output_f_deg = (180/math.pi) * pi_output_f
     pi_output_lat_deg = (180/math.pi) * pi_output_lat
     # Convert to PWM with 1500 Trim
-    pwm_output_f = (pi_output_f_deg * -16) 
+    #pwm_output_f = (pi_output_f_deg * -16) 
     pwm_output_lat = (pi_output_lat_deg * 16)
-
+    #print(pi_controller_f.setpoint - int(vel_meas[0]))
     # Output RC override (Pitch and Roll)
-    final_output_roll = abs(int(pwm_output_lat + 1500))
-    final_output_pitch = abs(int(pwm_output_f + 1500))
-    vehicle.channels.overrides[1] = final_output_roll
-    vehicle.channels.overrides[2] = final_output_pitch
+    #final_output_roll = abs(int(pwm_output_lat))
+    #inal_output_pitch = (pwm_output_f)
+    #print(output[1])
+    #print(pi_controller_lat.setpoint)
+    #vehicle.channels.overrides[1] = final_output_roll
+    print("PI Output: %s" % control_lat)
+    print("PI Command (Radians): %s" % pi_output_lat)
+    print("PI Command (Degrees): %s" % pi_output_lat_deg)
+    print("PWM Command: %s" % pwm_output_lat)
+    print("Vehicle Velocity: %s" % (vel_meas[1] * 3.28084))
+    vehicle.channels.overrides[1] = pwm_output_lat + 1500
     #vehicle.channels.overrides = {'1': abs(int(pwm_output_f + 1500)), '2': abs(int(pwm_output_lat + 1500))}
 
 
