@@ -7,7 +7,6 @@ import time
 import sys
 import math
 import json
-from simple_pid import PID
 import numpy as np
 from CoordTransform import generate_rotation_matrix
 # Declare Variables
@@ -29,11 +28,8 @@ Ki_long = -0.138
 forward_integral = 0
 lateral_integral = 0
 g = 32.033
-Kpwm = 16
 
-# PID object
-pi_controller_f = PID(Kp_long, Ki_long, 0, sample_time=0.05)
-pi_controller_lat = PID(Kp_lat, Ki_lat, 0, sample_time=0.05)
+
 # Function takes in joystick value and maps it to a desired speed command in m/s
 def map2speed(JoystickVal, mapping):
     InMin = float(mapping['JoystickMin'])
@@ -58,7 +54,7 @@ def getJoystickUpdates(mapping):
 
 # Evaluates states of buttons on controller and outputs corresponding commands
 def ButtonUpdates(mapping):
-    global pilot_joy_enable, toggle_arm, toggle_trc
+    global pilot_joy_enable, toggle_arm, toggle_trc, forward_integral, lateral_integral, forward_f, lateral_f
     # Arm On/off
     if (j_interface.get_button(int(mapping['Arm'])) == 1):
         toggle_arm ^= 1
@@ -95,7 +91,7 @@ def ButtonUpdates(mapping):
             print("TRC OFF")
 
 def run_trc(vehicle, joystick_inputs):
-    global start_time, forward_f, lateral_f
+    global start_time, forward_f, lateral_f, forward_integral, lateral_integral
 
     # Translational Rate Control
     # First step is to get user input and run through a command filter
@@ -104,16 +100,15 @@ def run_trc(vehicle, joystick_inputs):
     # We need to transform pilot input from heading frame into reference frame
     # Heading > Inertial > Calculate Error > Heading > Send to PID
     angles = vehicle.attitude # In Radians
-    R = generate_rotation_matrix([angles.roll, angles.pitch, angles.yaw]) # From NED to Heading Frame
+    R = generate_rotation_matrix([0, 0, angles.yaw]) # From NED to Heading Frame
     R_inv = np.linalg.inv(R) # From Heading to NED Frame
-    #HEAD_input = [pilot_input_forward, pilot_input_lateral, 0]
-    #HEAD_input_array = np.asarray(HEAD_input)
-    #NED_input_array = R_inv.dot(HEAD_input_array) # Transform the vector into NED frame
-    #pilot_input_forward = NED_input_array[0]
-    #pilot_input_lateral = NED_input_array[1]
+    HEAD_input = [pilot_input_forward, pilot_input_lateral, 0]
+    HEAD_input_array = np.asarray(HEAD_input)
+    NED_input_array = R.dot(HEAD_input_array) # Transform the vector into NED frame
+    pilot_input_forward = NED_input_array[0] * 3.28084 # ft/s
+    pilot_input_lateral = NED_input_array[1] * 3.28084 # ft/s
 
-    #print(pilot_input_forward)
-    #print(pilot_input_lateral)
+
     # Get time interval
     current_time = time.time()
     dt = current_time - start_time
@@ -129,18 +124,27 @@ def run_trc(vehicle, joystick_inputs):
     lateral_f = pilot_input_lateral_f # Lateral Velocity Setpoint
 
     # Now apply PI controller
-    pi_controller_f.setpoint = forward_f * 3.28084 # ft/s
-    pi_controller_lat.setpoint = lateral_f * 3.28084 # ft/s
-    # GPS Velocity
+
+
+    # Velocity Measurement
     vel_meas = vehicle.velocity # [Vx, Vy, Vz] in m/s in NED
-    velArray = np.asarray(vel_meas)
-    vel_meas = R.dot(velArray) # NED to Heading
-    print(vel_meas)
-    control_f = pi_controller_f(vel_meas[0] * 3.28084) # Feedback in ft/s
-    control_lat = pi_controller_lat(vel_meas[1] * 3.28084) # Feedback in ft/s
+    vel_meas = [vel_meas  * 3.28084 for vel_meas in vel_meas] # ft/s
+    # Calculate error in NED frame with ft/s as units
+    forward_error = pilot_input_forward_f - vel_meas[0]
+    lateral_error = pilot_input_lateral_f - vel_meas[1]
+    error = np.asarray([forward_error, lateral_error, 0])
+    # Convert error into Heading frame
+    error = R_inv.dot(error)
+    # Apply P
+    forward_p = Kp_long * error[0]
+    lateral_p = Kp_lat * error[1]
+    # Apply I
+    forward_integral = Ki_long * forward_integral + error[0] * dt
+    lateral_integral = Ki_lat * lateral_integral + error[1] * dt
+
     # Output is in Radians
-    pi_output_f = (-1/g) * (control_f + fwd_accel)
-    pi_output_lat = (1/g) * (control_lat + lat_accel)
+    pi_output_f = (-1/g) * (forward_p + forward_integral + fwd_accel)
+    pi_output_lat = (1/g) * (lateral_p + (lateral_integral) +  lat_accel)
 
     # Convert Radians to Degrees
     pi_output_f_deg = (180/math.pi) * pi_output_f
