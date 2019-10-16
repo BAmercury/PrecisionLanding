@@ -105,10 +105,10 @@ def run_trc(vehicle, joystick_inputs):
     angles = vehicle.attitude
     yaw_angle = angles.yaw # In radians
     R = generate_rotation_matrix([0, 0,yaw_angle]) # From NED to Body
-    R = np.linalg.inv(R) # From Body to NED
+    R_inv = np.linalg.inv(R) # From Body to NED
     HEAD_input = [pilot_input_forward, pilot_input_lateral, 0]
     HEAD_input_array = np.asarray(HEAD_input)
-    NED_input_array = R.dot(HEAD_input_array) # Transform the vecotr into NED frame
+    NED_input_array = R_inv.dot(HEAD_input_array) # Transform the vecotr into NED frame
     pilot_input_forward = NED_input_array[0]
     pilot_input_lateral = NED_input_array[1]
 
@@ -132,15 +132,24 @@ def run_trc(vehicle, joystick_inputs):
     pi_controller_f.setpoint = forward_f * 3.28084 # ft/s
     pi_controller_lat.setpoint = lateral_f * 3.28084 # ft/s
     # GPS Velocity
-    vel_meas = vehicle.velocity # [Vx, Vy, Vz] in m/s
+    vel_meas = vehicle.velocity # [Vx, Vy, Vz] in m/s in NED
     control_f = pi_controller_f(vel_meas[0] * 3.28084) # Feedback in ft/s
     control_lat = pi_controller_lat(vel_meas[1] * 3.28084) # Feedback in ft/s
     # Output is in Radians
     pi_output_f = (-1/g) * (control_f + fwd_accel)
     pi_output_lat = (1/g) * (control_lat + lat_accel)
+
+    # Need to convert this into Body frame then convert to degrees
+    p = [pi_output_f, pi_output_lat, 0]
+    pArray = np.asarray(p)
+    pBody = R.dot(pArray)
+    pi_output_f = pBody[0]
+    pi_output_lat = pBody[1]
+
     # Convert Radians to Degrees
     pi_output_f_deg = (180/math.pi) * pi_output_f
     pi_output_lat_deg = (180/math.pi) * pi_output_lat
+
     # Convert to PWM with 1500 Trim
     pwm_output_f = (pi_output_f_deg * -17.333) 
     pwm_output_lat = (pi_output_lat_deg * 17.333)
@@ -159,8 +168,8 @@ def run_trc(vehicle, joystick_inputs):
         pwm_l = 1000
     vehicle.channels.overrides[1] = pwm_l
     vehicle.channels.overrides[2] = pwm_f
-    print("Lat PWM output: %s" % pwm_l)
-    print("Long PWM output: %s" % pwm_f)
+    #print("Lat PWM output: %s" % pwm_l)
+    #print("Long PWM output: %s" % pwm_f)
 
 
 

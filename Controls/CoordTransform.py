@@ -30,7 +30,6 @@ def generate_rotation_matrix(euler_angles):
 
     M = L1 * L2 * L3
     return M
-
 if __name__ == "__main__":
     orient = [0, 0, 3.14159] # Radians, new vehicle orientation from origin
     M = generate_rotation_matrix(orient)
