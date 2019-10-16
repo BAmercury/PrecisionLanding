@@ -8,6 +8,8 @@ import sys
 import math
 import json
 from simple_pid import PID
+import numpy as np
+from CoordTransform import generate_rotation_matrix
 # Declare Variables
 pilot_joy_enable = False
 joystick_inputs = [0, 0, 1500, 1500]
@@ -99,8 +101,19 @@ def run_trc(vehicle, joystick_inputs):
     # First step is to get user input and run through a command filter
     pilot_input_forward = -joystick_inputs[1] # m/s, joystick need flipped
     pilot_input_lateral = joystick_inputs[0] # m/s
-    print(pilot_input_forward)
-    print(pilot_input_lateral)
+    # We need to transform pilot input from heading frame into reference frame
+    angles = vehicle.attitude
+    yaw_angle = angles.yaw # In radians
+    R = generate_rotation_matrix([0, 0,yaw_angle]) # From NED to Body
+    R = np.linalg.inv(R) # From Body to NED
+    HEAD_input = [pilot_input_forward, pilot_input_lateral, 0]
+    HEAD_input_array = np.asarray(HEAD_input)
+    NED_input_array = R.dot(HEAD_input_array) # Transform the vecotr into NED frame
+    pilot_input_forward = NED_input_array[0]
+    pilot_input_lateral = NED_input_array[1]
+
+    #print(pilot_input_forward)
+    #print(pilot_input_lateral)
     # Get time interval
     current_time = time.time()
     dt = current_time - start_time
@@ -146,6 +159,8 @@ def run_trc(vehicle, joystick_inputs):
         pwm_l = 1000
     vehicle.channels.overrides[1] = pwm_l
     vehicle.channels.overrides[2] = pwm_f
+    print("Lat PWM output: %s" % pwm_l)
+    print("Long PWM output: %s" % pwm_f)
 
 
 

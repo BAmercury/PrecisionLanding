@@ -70,3 +70,7 @@ slprj/sim/varcache/trc_controller/
 Study/slprj/sim/varcache/trc_controller/
 
 Controls/TRC.pyc
+
+Controls/CoordianteTransformTest.pyc
+
+Controls/CoordTransform.pyc
