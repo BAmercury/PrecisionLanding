@@ -102,15 +102,15 @@ def run_trc(vehicle, joystick_inputs):
     pilot_input_forward = -joystick_inputs[1] # m/s, joystick need flipped
     pilot_input_lateral = joystick_inputs[0] # m/s
     # We need to transform pilot input from heading frame into reference frame
-    angles = vehicle.attitude
-    yaw_angle = angles.yaw # In radians
-    R = generate_rotation_matrix([0, 0,yaw_angle]) # From NED to Body
-    R_inv = np.linalg.inv(R) # From Body to NED
-    HEAD_input = [pilot_input_forward, pilot_input_lateral, 0]
-    HEAD_input_array = np.asarray(HEAD_input)
-    NED_input_array = R_inv.dot(HEAD_input_array) # Transform the vecotr into NED frame
-    pilot_input_forward = NED_input_array[0]
-    pilot_input_lateral = NED_input_array[1]
+    # Heading > Inertial > Calculate Error > Heading > Send to PID
+    angles = vehicle.attitude # In Radians
+    R = generate_rotation_matrix([angles.roll, angles.pitch, angles.yaw]) # From NED to Heading Frame
+    R_inv = np.linalg.inv(R) # From Heading to NED Frame
+    #HEAD_input = [pilot_input_forward, pilot_input_lateral, 0]
+    #HEAD_input_array = np.asarray(HEAD_input)
+    #NED_input_array = R_inv.dot(HEAD_input_array) # Transform the vector into NED frame
+    #pilot_input_forward = NED_input_array[0]
+    #pilot_input_lateral = NED_input_array[1]
 
     #print(pilot_input_forward)
     #print(pilot_input_lateral)
@@ -133,18 +133,14 @@ def run_trc(vehicle, joystick_inputs):
     pi_controller_lat.setpoint = lateral_f * 3.28084 # ft/s
     # GPS Velocity
     vel_meas = vehicle.velocity # [Vx, Vy, Vz] in m/s in NED
+    velArray = np.asarray(vel_meas)
+    vel_meas = R.dot(velArray) # NED to Heading
+    print(vel_meas)
     control_f = pi_controller_f(vel_meas[0] * 3.28084) # Feedback in ft/s
     control_lat = pi_controller_lat(vel_meas[1] * 3.28084) # Feedback in ft/s
     # Output is in Radians
     pi_output_f = (-1/g) * (control_f + fwd_accel)
     pi_output_lat = (1/g) * (control_lat + lat_accel)
-
-    # Need to convert this into Body frame then convert to degrees
-    p = [pi_output_f, pi_output_lat, 0]
-    pArray = np.asarray(p)
-    pBody = R.dot(pArray)
-    pi_output_f = pBody[0]
-    pi_output_lat = pBody[1]
 
     # Convert Radians to Degrees
     pi_output_f_deg = (180/math.pi) * pi_output_f
