@@ -100,14 +100,13 @@ def run_trc(vehicle, joystick_inputs):
     # We need to transform pilot input from heading frame into reference frame
     # Heading > Inertial > Calculate Error > Heading > Send to PID
     angles = vehicle.attitude # In Radians
-    R = generate_rotation_matrix([0, 0, angles.yaw]) # From NED to Heading Frame
-    R_inv = R.transpose() # From Heading to NED Frame
-    HEAD_input = [pilot_input_forward, pilot_input_lateral, 0]
-    HEAD_input_array = np.asarray(HEAD_input)
-    NED_input_array = R_inv.dot(HEAD_input_array) # Transform the vector into NED frame
-    pilot_input_forward = NED_input_array[0] * 3.28084 # ft/s
-    pilot_input_lateral = NED_input_array[1] * 3.28084 # ft/s
-    #print(angles.yaw)
+    R = generate_rotation_matrix(angles.yaw) # From NED to Heading Frame
+    R_inv = np.linalg.inv(R) # From Heading to NED Frame
+    HEAD_input = [pilot_input_forward * 3.28084, pilot_input_lateral * 3.28084] # ft/s
+    NED_input_array = R_inv.dot(HEAD_input) # Transform the vector into NED frame
+    pilot_input_forward = NED_input_array[0] 
+    pilot_input_lateral = NED_input_array[1]
+    
 
     # Get time interval
     current_time = time.time()
@@ -132,9 +131,10 @@ def run_trc(vehicle, joystick_inputs):
     # Calculate error in NED frame with ft/s as units
     forward_error = pilot_input_forward_f - vel_meas[0]
     lateral_error = pilot_input_lateral_f - vel_meas[1]
-    error = np.asarray([forward_error, lateral_error, 0])
+    error = [forward_error, lateral_error]
     # Convert error into Heading frame
     error = R.dot(error)
+    #print(error)
     # Apply P
     forward_p = Kp_long * error[0]
     lateral_p = Kp_lat * error[1]
