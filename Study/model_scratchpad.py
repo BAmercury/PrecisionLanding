@@ -1,7 +1,11 @@
 import control
 import numpy as np
+from matplotlib import pyplot as plt
 
 # Open loop model
+# Quadrotor with aerodynamic properties and ACAH
+# Yande Lui formulation:
+# https://etda.libraries.psu.edu/catalog/13071yxl5197
 Alat = np.array([
     [-0.1180, 32.033, 0, 0],
     [0, -6.411, 1, 0],
@@ -27,6 +31,23 @@ print("Rank of Controllability Matrix: %s" % np.linalg.matrix_rank(ContMatrix))
 # Test if system is observable
 ObsMatrix = control.obsv(Alat, Clat)
 print("Rank of Observability Matrix: %s" % np.linalg.matrix_rank(ObsMatrix))
+
+
+sys_tf_lat = control.ss2tf(sys_lat)
+lat_delay = 0.156
+delay_NUM, delay_DEN = control.pade(lat_delay, 4)
+sys_tf_lat_delay = control.tf(delay_NUM, delay_DEN)
+sys_tf_lat = sys_tf_lat *sys_tf_lat_delay 
+
+
+T, yout = control.step_response(sys_tf_lat*17.3333)
+plt.plot(T, yout)
+plt.show()
+
+
+
+
+
 # Fully controllable, fully observable. So we can employ state feedback
-K = control.acker(Alat, Blat, [-10])
-print(K)
+# = control.acker(Alat, Blat, [-10])
+#print(K)
