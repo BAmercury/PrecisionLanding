@@ -92,3 +92,6 @@ s = tf('s');
 RC = 0.7;
 cf_sys = s/(RC*s + 1);
 [cf_num, cf_den] = tfdata(cf_sys);
+
+%% Velocity Control State Feedback Approach
+
