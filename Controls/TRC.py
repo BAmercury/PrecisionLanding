@@ -143,7 +143,7 @@ def run_trc(vehicle, joystick_inputs):
     forward_p = Kp_long * error[0]
     lateral_p = Kp_lat * error[1]
     # Apply I
-    forward_integral = Ki_long * forward_integral + error[0] * dt
+    forward_integral = Ki_long * forward_integral + error[0] * dt # Left Riemann Sum
     lateral_integral = Ki_lat * lateral_integral + error[1] * dt
 
     # Output is in Radians
