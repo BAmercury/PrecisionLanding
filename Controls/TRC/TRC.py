@@ -3,12 +3,12 @@
 # Using Dronekit to send commands to drone
 from dronekit import connect, VehicleMode
 import pygame
-import pygame
 import time
-import json
 import sys
 import math
-
+import json
+import numpy as np
+from CoordTransform import generate_rotation_matrix
 # Declare Variables
 pilot_joy_enable = False
 joystick_inputs = [0, 0, 1500, 1500]
@@ -25,15 +25,23 @@ Kp_lat = 1.351
 Ki_lat = 0.0095
 Kp_long = -1.957
 Ki_long = -0.138
+#Kp_long = -1.8155
+#Ki_long = -0.12788
+#Kp_lat = 1.2536
+#Ki_lat = 0.08861
 forward_integral = 0
 lateral_integral = 0
 g = 32.033
-Kpwm = 16
 
 
 # Function takes in joystick value and maps it to a desired speed command in m/s
 def map2speed(JoystickVal, mapping):
-    return float( (JoystickVal - -1 * (float(mapping['MaxSpeed']) - float(mapping['MinSpeed']) / (1 - -1) + float(mapping['MinSpeed']))))
+    InMin = float(mapping['JoystickMin'])
+    InMax = float(mapping['JoystickMax'])
+    OutMax = float(mapping['MaxSpeed'])
+    OutMin = float(mapping['MinSpeed'])
+    val = (JoystickVal - InMin) * (OutMax - OutMin) / (InMax - InMin) + OutMin
+    return float(val)
 # Function to map joystick input to PWM
 # PWM range is 1900 to 1100 and joystick range is 1 to -1
 def map2pwm(x):
@@ -50,7 +58,7 @@ def getJoystickUpdates(mapping):
 
 # Evaluates states of buttons on controller and outputs corresponding commands
 def ButtonUpdates(mapping):
-    global pilot_joy_enable, toggle_custom_mode, toggle_arm, toggle_trc
+    global pilot_joy_enable, toggle_arm, toggle_trc, forward_integral, lateral_integral, forward_f, lateral_f
     # Arm On/off
     if (j_interface.get_button(int(mapping['Arm'])) == 1):
         toggle_arm ^= 1
@@ -86,19 +94,23 @@ def ButtonUpdates(mapping):
         else:
             print("TRC OFF")
 
-def constrain(val, min_val, max_val):
-    return min(max_val, max(min_val, val))
-
 def run_trc(vehicle, joystick_inputs):
     global start_time, forward_f, lateral_f, forward_integral, lateral_integral
 
     # Translational Rate Control
-    output = []
     # First step is to get user input and run through a command filter
-    pilot_input_forward = -joystick_inputs[1]
-    pilot_input_lateral = -joystick_inputs[0]
-    #print("Desired Forward (m/s): %s" % pilot_input_forward)
-    #print("Desired Lateral (m/s): %s" % pilot_input_lateral)
+    pilot_input_forward = -joystick_inputs[1] # m/s, joystick need flipped
+    pilot_input_lateral = joystick_inputs[0] # m/s
+    # We need to transform pilot input from heading frame into reference frame
+    # Heading > Inertial > Calculate Error > Heading > Send to PID
+    angles = vehicle.attitude # In Radians
+    R = generate_rotation_matrix(angles.yaw) # From NED to Heading Frame
+    R_inv = np.linalg.inv(R) # From Heading to NED Frame
+    HEAD_input = [pilot_input_forward * 3.28084, pilot_input_lateral * 3.28084] # ft/s
+    NED_input_array = R_inv.dot(HEAD_input) # Transform the vector into NED frame
+    pilot_input_forward = NED_input_array[0] 
+    pilot_input_lateral = NED_input_array[1]
+    
 
     # Get time interval
     current_time = time.time()
@@ -109,52 +121,59 @@ def run_trc(vehicle, joystick_inputs):
     pilot_input_forward_f = (a * forward_f) + ((1-a) * float(pilot_input_forward))
     pilot_input_lateral_f = (a * lateral_f) + ((1-a) * float(pilot_input_lateral))
     # differentiate
-    fwd_accel = (pilot_input_forward_f - forward_f)/dt
-    forward_f = pilot_input_forward_f
-    lat_accel = (pilot_input_lateral_f - lateral_f)/dt
-    lateral_f = pilot_input_lateral_f    
-
-    # Save output
-    output.append(forward_f) # Forward Velocity Setpoint
-    output.append(fwd_accel) # Pilot Forward Acceleration Feedforward
-    output.append(lateral_f) # Lateral Velocity Setpoint
-    output.append(lat_accel) # Pilot Lateral Acceleration Feedforward
+    fwd_accel = (pilot_input_forward_f - forward_f)/dt # Pilot Forward Acceleration Feedforward
+    forward_f = pilot_input_forward_f # Forward Velocity Setpoint
+    lat_accel = (pilot_input_lateral_f - lateral_f)/dt # Pilot Lateral Acceleration Feedforward
+    lateral_f = pilot_input_lateral_f # Lateral Velocity Setpoint
 
     # Now apply PI controller
 
-    # Get the error between pilot and aircraft
-    vel_meas = vehicle.velocity # [Vx, Vy, Vz] in m/s
-    forward_error = forward_f - vel_meas[0]
-    lateral_error = lateral_f - vel_meas[1]
+
+    # Velocity Measurement
+    vel_meas = vehicle.velocity # [Vx, Vy, Vz] in m/s in NED
+    vel_meas = [vel_meas  * 3.28084 for vel_meas in vel_meas] # ft/s
+    # Calculate error in NED frame with ft/s as units
+    forward_error = pilot_input_forward_f - vel_meas[0]
+    lateral_error = pilot_input_lateral_f - vel_meas[1]
+    error = [forward_error, lateral_error]
+    # Convert error into Heading frame
+    error = R.dot(error)
+    #print(error)
     # Apply P
-    forward_p = Kp_long * forward_error
-    lat_p = Kp_lat * lateral_error
+    forward_p = Kp_long * error[0]
+    lateral_p = Kp_lat * error[1]
     # Apply I
-    forward_integral = forward_integral + forward_error * dt
-    lateral_integral = lateral_integral + lateral_error * dt
-    #forward_integral = constrain(forward_integral, 0, 30)
-    #lateral_integral = constrain(lateral_integral, 0, 30)
-    #print(forward_integral)
+    forward_integral = Ki_long * forward_integral + error[0] * dt
+    lateral_integral = Ki_lat * lateral_integral + error[1] * dt
+
     # Output is in Radians
-    pi_output_f = (-1/g) * (forward_p + (Ki_long * forward_integral) + output[1])
-    pi_output_lat = (1/g) * (lat_p + (Ki_lat * lateral_integral) + output[3])
+    pi_output_f = (-1/g) * (forward_p + forward_integral + fwd_accel)
+    pi_output_lat = (1/g) * (lateral_p + lateral_integral +  lat_accel)
+
     # Convert Radians to Degrees
     pi_output_f_deg = (180/math.pi) * pi_output_f
     pi_output_lat_deg = (180/math.pi) * pi_output_lat
-    # Convert to PWM with 1500 Trim
-    pwm_output_f = (pi_output_f_deg * -16) 
-    pwm_output_lat = (pi_output_lat_deg * 16)
 
-    # Output RC override (Pitch and Roll)
-    final_output_roll = abs(int(pwm_output_lat + 1500))
-    final_output_roll = constrain(final_output_roll, 0, 2000)
-    final_output_pitch = abs(int(pwm_output_f + 1500))
-    final_output_pitch = constrain(final_output_pitch, 0, 2000)
-    print("Forward Error: %s" % forward_error)
-    print("Lateral Error: %s" % lateral_error)
-    vehicle.channels.overrides[1] = final_output_roll
-    vehicle.channels.overrides[2] = final_output_pitch
-    #vehicle.channels.overrides = {'1': abs(int(pwm_output_f + 1500)), '2': abs(int(pwm_output_lat + 1500))}
+    # Convert to PWM with 1500 Trim
+    pwm_output_f = (pi_output_f_deg * -17.333) 
+    pwm_output_lat = (pi_output_lat_deg * 17.333)
+
+    pwm_f = abs(int(pwm_output_f + 1500))
+    pwm_l = abs(int(pwm_output_lat + 1500))
+    
+    # Enforce Saturation Limits
+    if (pwm_f > 2000):
+        pwm_f = 2000
+    elif (pwm_f < 1000):
+        pwm_f = 1000
+    if (pwm_l > 2000):
+        pwm_l = 2000
+    elif (pwm_l < 1000):
+        pwm_l = 1000
+    vehicle.channels.overrides[1] = pwm_l
+    vehicle.channels.overrides[2] = pwm_f
+    #print("Lat PWM output: %s" % pwm_l)
+    #print("Long PWM output: %s" % pwm_f)
 
 
 
@@ -224,8 +243,7 @@ try:
 
             if event.type == pygame.JOYBUTTONDOWN:
                 ButtonUpdates(config_map)
-                #print "Attitude: %s" % vehicle.attitude
-                #print "Global Location (relative altitude): %s" % vehicle.location.global_relative_frame.alt
+            
 
         # Send Joystick Inputs if enabled
         if pilot_joy_enable:
@@ -233,6 +251,7 @@ try:
         
         if (toggle_trc):
             run_trc(vehicle, joystick_inputs)
+            #print("Velocity (m/s): %s" % vehicle.velocity)
         
         time.sleep(float(config_map['UpdateRate'])) # Radio Update Rate
 

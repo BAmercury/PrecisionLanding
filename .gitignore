@@ -68,3 +68,15 @@ slprj/sim/varcache/id_model/
 slprj/sim/varcache/trc_controller/
 
 Study/slprj/sim/varcache/trc_controller/
+
+Controls/TRC.pyc
+
+Controls/CoordianteTransformTest.pyc
+
+Controls/CoordTransform.pyc
+
+slprj/sim/varcache/controllers/checksumOfCache.mat
+
+slprj/sim/varcache/controllers/tmwinternal/simulink_cache.xml
+
+slprj/sim/varcache/controllers/varInfo.mat
