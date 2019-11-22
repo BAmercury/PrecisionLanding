@@ -69,11 +69,38 @@ sys_lat_tf_vel = tf(NUM, DEN, 'InputDelay', lat_time_delay);
 sys_long_tf_vel = tf(NUML, DENL, 'InputDelay', long_time_delay);
 
 
+%%
+% Augment model with virtual state for position
+Along_pl = [0 1 0 0 0;
+    0 -0.1081 -32.513 0 0;
+    0 0 -6.88 1 0;
+    0 0 -10.931 0 1;
+    0 0 -1.235 0 0];
+Blong_pl = [0;
+        0;
+        0.0053854;
+        0.0069518;
+        0.001443];
+Clong_pl = [0.3048 0 0 0 0]; % Convert to meters
+Dlong = 0;
+sys_long_pl = ss(Along_pl, Blong_pl, Clong_pl, Dlong);
 
 
-
-
-
+Q = Clong_pl'*Clong_pl;
+R = 1;
+K = lqr(Along_pl, Blong_pl, Q, R);
+sys_long_pl_c = ss(Along_pl-Blong_pl*K, Blong_pl, Clong_pl, Dlong);
+step(sys_long_pl_c)
+% Feedforward precompensation
+ s = size(Along_pl,1);
+ Z = [zeros([1,s]) 1];
+ N = inv([Along_pl,Blong_pl;Clong_pl,Dlong])*Z';
+ Nx = N(1:s);
+ Nu = N(1+s);
+ Nbar=Nu + K*Nx;
+sys_long_pl_c = ss(Along_pl-Blong_pl*K, Blong_pl*Nbar, Clong_pl, Dlong);
+hold on;
+step(sys_long_pl_c)
 
 
 
