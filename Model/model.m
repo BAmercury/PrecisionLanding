@@ -71,6 +71,8 @@ sys_long_tf_vel = tf(NUML, DENL, 'InputDelay', long_time_delay);
 
 %%
 % Augment model with virtual state for position
+% States are: Position, Velocity, Roll, ACAH Virtual State, ACAH Virtual
+% State 2
 Along_pl = [0 1 0 0 0;
     0 -0.1081 -32.513 0 0;
     0 0 -6.88 1 0;
@@ -92,20 +94,41 @@ K = lqr(Along_pl, Blong_pl, Q, R);
 sys_long_pl_c = ss(Along_pl-Blong_pl*K, Blong_pl, Clong_pl, Dlong);
 step(sys_long_pl_c)
 % Feedforward precompensation
- s = size(Along_pl,1);
- Z = [zeros([1,s]) 1];
- N = inv([Along_pl,Blong_pl;Clong_pl,Dlong])*Z';
- Nx = N(1:s);
- Nu = N(1+s);
- Nbar=Nu + K*Nx;
+fig1 = figure;
+s = size(Along_pl,1);
+Z = [zeros([1,s]) 1];
+N = inv([Along_pl,Blong_pl;Clong_pl,Dlong])*Z';
+Nx = N(1:s);
+Nu = N(1+s);
+Nbar=Nu + K*Nx;
 sys_long_pl_c = ss(Along_pl-Blong_pl*K, Blong_pl*Nbar, Clong_pl, Dlong);
 hold on;
 step(sys_long_pl_c)
 
 
+% Lsim
+fig2 = figure;
+t = 0:0.01:200;
+r = 1*ones(size(t));
+r = sin(0.001*t);
+[y, t, x] = lsim(sys_long_pl_c, r, t);
+plot(t, r);
+hold on;
+plot(t, y);
 
+%%
+% Observer
+P = [-40 -41 -42 -43 -44];
+L = place(Along_pl', Clong_pl', P)';
 
-
+Ace = [(Along_pl-Blong_pl*K) (Blong_pl*K);
+       zeros(size(Along_pl)) (Along_pl-L*Clong_pl)];
+Bce = [Blong_pl*Nbar;
+       zeros(size(Blong_pl))];
+Cce = [Clong_pl zeros(size(Clong_pl))];
+Dce = 0;
+sys_est_cl = ss(Ace,Bce,Cce,Dce);
+step(sys_est_cl)
 
 
 
