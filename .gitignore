@@ -80,3 +80,15 @@ slprj/sim/varcache/controllers/checksumOfCache.mat
 slprj/sim/varcache/controllers/tmwinternal/simulink_cache.xml
 
 slprj/sim/varcache/controllers/varInfo.mat
+
+slprj/sim/varcache/state_fdbk/checksumOfCache.mat
+
+slprj/sim/varcache/state_fdbk/tmwinternal/simulink_cache.xml
+
+slprj/sim/varcache/state_fdbk/varInfo.mat
+
+slprj/sim/varcache/trc_controller_inout/checksumOfCache.mat
+
+slprj/sim/varcache/trc_controller_inout/tmwinternal/simulink_cache.xml
+
+slprj/sim/varcache/trc_controller_inout/varInfo.mat
